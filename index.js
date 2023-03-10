@@ -22,17 +22,22 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.all("/", async (req, res) => {
   console.log("消息推送", req.body);
+  // 从 header 中取appid，如果 from-appid 不存在，则不是资源复用场景，可以直接传空字符串，使用环境所属账号发起云调用
+  const appid = req.headers["x-wx-from-appid"] || "";
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body;
+  console.log("推送接收的账号", ToUserName, "创建时间", CreateTime);
   if (MsgType === "text") {
     if (Content === "回复文字") {
-      res.send({
-        ToUserName: FromUserName,
-        FromUserName: ToUserName,
-        CreateTime: CreateTime,
-        MsgType: "text",
-        Content: "这是回复的消息",
+      // 小程序、公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: "text",
+        text: {
+          content: "这是回复的消息",
+        },
       });
     }
+    res.send("success");
   } else {
     res.send("success");
   }
