@@ -3,9 +3,10 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const { init: initDB, Counter } = require("./db");
-const bodyParser = require("body-parser"); // added 10-03-22
+const bodyParser = require("body-parser");
 const request = require("request");
-const FTPClient = require("ftp");
+const FTP = require("ftp");
+const fs = require("fs");
 
 const logger = morgan("tiny");
 
@@ -15,11 +16,41 @@ app.use(express.json());
 app.use(cors());
 app.use(logger);
 
-//////////////////////// added 10-03-22
-
 app.use(bodyParser.raw());
 app.use(bodyParser.json({}));
 app.use(bodyParser.urlencoded({ extended: true }));
+
+const ftpClient = new FTP();
+const ftpConfig = {
+  host: "100.64.21.169",
+  port: 21,
+  user: "api_user",
+  password: "Ranon123",
+};
+
+const mediaUrl = "http://api.weixin.qq.com/cgi-bin/media/upload?type=image";
+
+async function retrieveImageFromNAS() {
+  return new Promise((resolve, reject) => {
+    ftpClient.connect(ftpConfig);
+    ftpClient.on("ready", () => {
+      ftpClient.get("/api/image.jpg", (err, stream) => {
+        if (err) {
+          console.log("Error retrieving file from NAS:", err);
+          reject(err);
+        } else {
+          console.log("Retrieving file from NAS...");
+          const writeStream = fs.createWriteStream("./picture.jpg");
+          stream.pipe(writeStream);
+          writeStream.on("close", () => {
+            console.log("File retrieved from NAS.");
+            resolve();
+          });
+        }
+      });
+    });
+  });
+}
 
 app.all("/", async (req, res) => {
   console.log("消息推送", req.body);
@@ -30,13 +61,13 @@ app.all("/", async (req, res) => {
   if (MsgType === "text") {
     if (Content === "回复文字") {
       // 小程序、公众号可用
-      const synUrl = await getSynologyDownloadLink();
       await sendmess(appid, {
         touser: FromUserName,
         msgtype: "text",
         text: {
-          content: `${synUrl}`,
+          content: `${mediaUrl}`,
         },
+        media: fs.createReadStream("./picture.jpg"),
       });
     }
     res.send("success");
@@ -56,6 +87,7 @@ const port = process.env.PORT || 80;
 
 async function bootstrap() {
   await initDB();
+  await retrieveImageFromNAS(); // retrieve the image from the NAS before starting the server
   app.listen(port, () => {
     console.log("启动成功", port);
   });
@@ -69,7 +101,7 @@ function sendmess(appid, mess) {
       {
         method: "POST",
         url: `http://api.weixin.qq.com/cgi-bin/message/custom/send?from_appid=${appid}`,
-        body: JSON.stringify(mess),
+        formData: mess,
       },
       function (error, response) {
         if (error) {
@@ -81,47 +113,5 @@ function sendmess(appid, mess) {
         }
       }
     );
-  });
-}
-
-function getSynologyDownloadLink() {
-  const ftp = new FTPClient();
-  return new Promise((resolve, reject) => {
-    ftp.on("ready", function () {
-      ftp.cwd("/api", function (err) {
-        if (err) {
-          reject(err);
-          return;
-        }
-        ftp.get("picture.jpg", function (err, stream) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          let data = "";
-          stream.on("data", function (chunk) {
-            data += chunk.toString();
-          });
-          stream.on("end", function () {
-            ftp.end();
-            const synUrl = data.trim();
-            resolve(synUrl);
-          });
-          stream.on("error", function (err) {
-            ftp.end();
-            reject(err);
-          });
-        });
-      });
-    });
-    ftp.on("error", function (err) {
-      reject(err);
-    });
-    ftp.connect({
-      host: "100.64.21.169",
-      port: 21,
-      user: "api_user",
-      password: "Ranon123",
-    });
   });
 }
