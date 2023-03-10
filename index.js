@@ -33,9 +33,9 @@ app.all("/", async (req, res) => {
       const synUrl = await getSynologyDownloadLink();
       await sendmess(appid, {
         touser: FromUserName,
-        msgtype: "link",
-        link: {
-          url: synUrl,
+        msgtype: "text",
+        text: {
+          content: `${synUrl}`,
         },
       });
     }
