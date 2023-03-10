@@ -93,7 +93,7 @@ function getSynologyDownloadLink() {
           reject(err);
           return;
         }
-        ftp.get("file.txt", function (err, stream) {
+        ftp.get("picture.jpg", function (err, stream) {
           if (err) {
             reject(err);
             return;
