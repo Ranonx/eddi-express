@@ -1,24 +1,16 @@
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
-const morgan = require("morgan");
-const { init: initDB, Counter } = require("./db");
-const bodyParser = require("body-parser"); // added 10-03-22
-const request = require("request");
+const { init: initDB } = require("./db");
 
-const logger = morgan("tiny");
+const logger = require("morgan")("tiny");
 
 const app = express();
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
 app.use(logger);
-
-//////////////////////// added 10-03-22
-
-app.use(bodyParser.raw());
-app.use(bodyParser.json({}));
-app.use(bodyParser.urlencoded({ extended: true }));
 
 app.all("/", async (req, res) => {
   console.log("消息推送", req.body);
@@ -27,27 +19,20 @@ app.all("/", async (req, res) => {
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body;
   console.log("推送接收的账号", ToUserName, "创建时间", CreateTime);
   if (MsgType === "text") {
-    if (Content === `${dob}_${userName}`) {
+    if (Content === "我的报告") {
       // 小程序、公众号可用
       await sendmess(appid, {
         touser: FromUserName,
         msgtype: "text",
         text: {
           content:
-            `https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/${dob}_${userName}_051633_Report.pdf`,
+            "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
         },
       });
     }
     res.send("success");
   } else {
     res.send("success");
-  }
-});
-
-// 小程序调用，获取微信 Open ID
-app.get("/api/wx_openid", async (req, res) => {
-  if (req.headers["x-wx-source"]) {
-    res.send(req.headers["x-wx-openid"]);
   }
 });
 
@@ -64,6 +49,7 @@ bootstrap();
 
 function sendmess(appid, mess) {
   return new Promise((resolve, reject) => {
+    const request = require("request");
     request(
       {
         method: "POST",
