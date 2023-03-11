@@ -27,14 +27,14 @@ app.all("/", async (req, res) => {
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body;
   console.log("推送接收的账号", ToUserName, "创建时间", CreateTime);
   if (MsgType === "text") {
-    if (Content === "我的报告") {
+    if (Content === `${dob}_${userName}`) {
       // 小程序、公众号可用
       await sendmess(appid, {
         touser: FromUserName,
         msgtype: "text",
         text: {
           content:
-            "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
+            `https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/${dob}_${userName}_051633_Report.pdf`,
         },
       });
     }
