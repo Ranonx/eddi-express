@@ -21,16 +21,24 @@ app.all("/", async (req, res) => {
   if (MsgType === "text") {
     if (Content === "我的报告") {
       // 小程序、公众号可用
-      await sendmess(appid, {
-        touser: FromUserName,
-        msgtype: "text",
-        text: {
-          content:
-            "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
-        },
-      });
+      try {
+        const result = await sendmess(appid, {
+          touser: FromUserName,
+          msgtype: "text",
+          text: {
+            content:
+              "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
+          },
+        });
+        console.log("发送消息成功", result);
+        res.send("success");
+      } catch (error) {
+        console.log("发送消息失败", error);
+        res.status(500).send("Failed to send message.");
+      }
+    } else {
+      res.send("success");
     }
-    res.send("success");
   } else {
     res.send("success");
   }
