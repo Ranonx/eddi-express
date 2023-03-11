@@ -19,26 +19,48 @@ app.all("/", async (req, res) => {
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body;
   console.log("推送接收的账号", ToUserName, "创建时间", CreateTime);
   if (MsgType === "text") {
-    if (Content === "我的报告") {
+    const pattern = /^(\d{4}-\d{2}-\d{2})_(\w+)$/;
+    const match = Content.match(pattern);
+    if (match) {
+      const birthDate = match[1];
+      const userName = match[2];
+      const params = {
+        Bucket: "file-storage-1312367695",
+        Region: "ap-nanjing",
+        Key: `${birthDate}_${userName}_051633_Report.pdf`,
+      };
+      cos.headObject(params, async (err, data) => {
+        if (err) {
+          console.error(err);
+          const result2 = await sendmess(appid, {
+            touser: FromUserName,
+            msgtype: "text",
+            text: {
+              content: "Sorry, the file you requested could not be found.",
+            },
+          });
+        } else {
+          const result2 = await sendmess(appid, {
+            touser: FromUserName,
+            msgtype: "text",
+            text: {
+              content: data.Url,
+            },
+          });
+        }
+      });
+    } else if (Content === "我的报告") {
       // 小程序、公众号可用
-      try {
-        const result = await sendmess(appid, {
-          touser: FromUserName,
-          msgtype: "text",
-          text: {
-            content:
-              "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
-          },
-        });
-        console.log("发送消息成功", result);
-        res.send("success");
-      } catch (error) {
-        console.log("发送消息失败", error);
-        res.status(500).send("Failed to send message.");
-      }
-    } else {
-      res.send("success");
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: "text",
+        text: {
+          content:
+            "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
+        },
+      });
     }
+    res.send("success");
   } else {
     res.send("success");
   }
