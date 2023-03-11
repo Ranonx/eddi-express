@@ -3,10 +3,8 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const { init: initDB, Counter } = require("./db");
-const bodyParser = require("body-parser");
+const bodyParser = require("body-parser"); // added 10-03-22
 const request = require("request");
-const FTP = require("ftp");
-const fs = require("fs");
 
 const logger = morgan("tiny");
 
@@ -16,41 +14,11 @@ app.use(express.json());
 app.use(cors());
 app.use(logger);
 
+//////////////////////// added 10-03-22
+
 app.use(bodyParser.raw());
 app.use(bodyParser.json({}));
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const ftpClient = new FTP();
-const ftpConfig = {
-  host: "100.64.21.169",
-  port: 21,
-  user: "api_user",
-  password: "Ranon123",
-};
-
-const mediaUrl = "http://api.weixin.qq.com/cgi-bin/media/upload?type=image";
-
-async function retrieveImageFromNAS() {
-  return new Promise((resolve, reject) => {
-    ftpClient.connect(ftpConfig);
-    ftpClient.on("ready", () => {
-      ftpClient.get("/api/image.jpg", (err, stream) => {
-        if (err) {
-          console.log("Error retrieving file from NAS:", err);
-          reject(err);
-        } else {
-          console.log("Retrieving file from NAS...");
-          const writeStream = fs.createWriteStream("./picture.jpg");
-          stream.pipe(writeStream);
-          writeStream.on("close", () => {
-            console.log("File retrieved from NAS.");
-            resolve();
-          });
-        }
-      });
-    });
-  });
-}
 
 app.all("/", async (req, res) => {
   console.log("消息推送", req.body);
@@ -59,15 +27,15 @@ app.all("/", async (req, res) => {
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body;
   console.log("推送接收的账号", ToUserName, "创建时间", CreateTime);
   if (MsgType === "text") {
-    if (Content === "回复文字") {
+    if (Content === "我的报告") {
       // 小程序、公众号可用
       await sendmess(appid, {
         touser: FromUserName,
         msgtype: "text",
         text: {
-          content: `${mediaUrl}`,
+          content:
+            "https://file-storage-1312367695.cos.ap-nanjing.myqcloud.com/example.pdf",
         },
-        media: fs.createReadStream("./picture.jpg"),
       });
     }
     res.send("success");
@@ -87,7 +55,6 @@ const port = process.env.PORT || 80;
 
 async function bootstrap() {
   await initDB();
-  await retrieveImageFromNAS(); // retrieve the image from the NAS before starting the server
   app.listen(port, () => {
     console.log("启动成功", port);
   });
@@ -101,7 +68,7 @@ function sendmess(appid, mess) {
       {
         method: "POST",
         url: `http://api.weixin.qq.com/cgi-bin/message/custom/send?from_appid=${appid}`,
-        formData: mess,
+        body: JSON.stringify(mess),
       },
       function (error, response) {
         if (error) {
