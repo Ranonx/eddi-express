@@ -2,16 +2,16 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const { init: initDB } = require("./db");
+
 const logger = require("morgan")("tiny");
+
 const app = express();
 
-// Middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
 app.use(logger);
 
-// Route to handle incoming messages
 app.all("/", async (req, res) => {
   console.log("消息推送", req.body);
   // 从 header 中取appid，如果 from-appid 不存在，则不是资源复用场景，可以直接传空字符串，使用环境所属账号发起云调用
@@ -44,7 +44,17 @@ app.all("/", async (req, res) => {
   }
 });
 
-// sendmess function
+const port = process.env.PORT || 80;
+
+async function bootstrap() {
+  await initDB();
+  app.listen(port, () => {
+    console.log("启动成功", port);
+  });
+}
+
+bootstrap();
+
 function sendmess(appid, mess) {
   return new Promise((resolve, reject) => {
     const request = require("request");
@@ -66,15 +76,3 @@ function sendmess(appid, mess) {
     );
   });
 }
-
-// Start server
-const port = process.env.PORT || 80;
-
-async function bootstrap() {
-  await initDB();
-  app.listen(port, () => {
-    console.log("启动成功", port);
-  });
-}
-
-bootstrap();
