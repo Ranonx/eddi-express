@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const { init: initDB } = require("./db");
@@ -9,28 +10,6 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
 app.use(logger);
-
-function sendmess(appid, mess) {
-  return new Promise((resolve, reject) => {
-    const request = require("request");
-    request(
-      {
-        method: "POST",
-        url: `http://api.weixin.qq.com/cgi-bin/message/custom/send?from_appid=${appid}`,
-        body: JSON.stringify(mess),
-      },
-      function (error, response) {
-        if (error) {
-          console.log("接口返回错误", error);
-          reject(error.toString());
-        } else {
-          console.log("接口返回内容", response.body);
-          resolve(response.body);
-        }
-      }
-    );
-  });
-}
 
 // Route to handle incoming messages
 app.all("/", async (req, res) => {
@@ -64,6 +43,29 @@ app.all("/", async (req, res) => {
     res.send("success");
   }
 });
+
+// sendmess function
+function sendmess(appid, mess) {
+  return new Promise((resolve, reject) => {
+    const request = require("request");
+    request(
+      {
+        method: "POST",
+        url: `http://api.weixin.qq.com/cgi-bin/message/custom/send?from_appid=${appid}`,
+        body: JSON.stringify(mess),
+      },
+      function (error, response) {
+        if (error) {
+          console.log("接口返回错误", error);
+          reject(error.toString());
+        } else {
+          console.log("接口返回内容", response.body);
+          resolve(response.body);
+        }
+      }
+    );
+  });
+}
 
 // Start server
 const port = process.env.PORT || 80;
